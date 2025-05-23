@@ -12,6 +12,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { createCattle, getAllCattle, deleteCattle } from "@/firebase/services/cattel";
+import { useNavigate } from "react-router-dom";
+import { getAllEvents } from '@/firebase/services/event';
 
 const cattleSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -30,6 +32,8 @@ const InjectionPage = () => {
   const [cattleToDelete, setCattleToDelete] = useState(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const navigate = useNavigate();
+  const [nextInjections, setNextInjections] = useState({});
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(cattleSchema),
@@ -48,6 +52,44 @@ const InjectionPage = () => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const fetchAllNextInjections = async () => {
+      const results = {};
+      for (const cattle of cattles) {
+        const events = await getAllEvents(cattle.id);
+        const mainEvent = events.find(e => e.isInjection && e.isRepeated);
+        if (!mainEvent) {
+          results[cattle.id] = null;
+          continue;
+        }
+        const isOccurrenceCompleted = (event, occurrenceDate) => {
+          if (!event.isRepeated || !event.completedTill) return false;
+          return new Date(occurrenceDate) <= new Date(event.completedTill);
+        };
+        // Find the first uncompleted occurrence that is today or in the future
+        let nextDate = new Date(mainEvent.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let found = false;
+        for (let i = 0; i < 100; i++) { // limit to 100 occurrences for safety
+          const occurrenceDate = new Date(nextDate);
+          occurrenceDate.setHours(0, 0, 0, 0);
+          if (!isOccurrenceCompleted(mainEvent, nextDate.toISOString()) && occurrenceDate >= today) {
+            results[cattle.id] = nextDate.toISOString();
+            found = true;
+            break;
+          }
+          nextDate.setDate(nextDate.getDate() + mainEvent.repeatDuration);
+        }
+        if (!found) {
+          results[cattle.id] = null;
+        }
+      }
+      setNextInjections(results);
+    };
+    if (cattles.length > 0) fetchAllNextInjections();
+  }, [cattles]);
 
   // Function to start the camera
   const startCamera = async () => {
@@ -171,7 +213,7 @@ const InjectionPage = () => {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">My Cattle</h2>
+        <h2 className="text-2xl font-bold">My Cattles</h2>
         
         <Dialog open={open} onOpenChange={(isOpen) => {
           if (!isOpen) closeDialog();
@@ -338,9 +380,6 @@ const InjectionPage = () => {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Settings className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -367,13 +406,20 @@ const InjectionPage = () => {
                     </div>
                     <div className="mt-2">
                       <p className="text-muted-foreground">Next Injection</p>
-                      <p>{cattle.nextInjection ? new Date(cattle.nextInjection).toLocaleDateString() : "None scheduled"}</p>
+                      <p>{nextInjections[cattle.id] ? new Date(nextInjections[cattle.id]).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "None scheduled"}</p>
                     </div>
                   </div>
                 </CardContent>
                 
                 <CardFooter>
-                  <Button variant="outline" size="sm" className="w-full">View Details</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => navigate(`/cattle/${cattle.id}`)}
+                  >
+                    View Details
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
