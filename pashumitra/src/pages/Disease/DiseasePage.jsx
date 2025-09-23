@@ -210,7 +210,7 @@ const DiseasePage = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Disease Detection</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-2">Disease Detection</h2>
             <p className="text-muted-foreground">
               Use AI-powered analysis to detect potential diseases in your cattle
             </p>
@@ -230,7 +230,7 @@ const DiseasePage = () => {
         <>
           {/* Cattle Selection */}
           <div className="max-w-4xl mx-auto mb-6">
-            <Card className="border-2 border-dashed">
+            <Card className="border-2 border-dashed hover:shadow-sm transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5" />
@@ -251,7 +251,7 @@ const DiseasePage = () => {
                     {cattleList.map((cattle) => (
                       <Card
                         key={cattle.id}
-                        className={`cursor-pointer transition-all hover:shadow-md hover:scale-105 ${selectedCattle === cattle.id
+                        className={`cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${selectedCattle === cattle.id
                           ? 'ring-2 ring-primary bg-primary/5 scale-105'
                           : 'hover:bg-muted/50'
                           }`}
@@ -277,7 +277,7 @@ const DiseasePage = () => {
           </div>
 
           <div className="max-w-2xl mx-auto">
-            <Card className="border-2 border-dashed">
+            <Card className="border-2 border-dashed hover:shadow-sm transition-shadow">
               <CardHeader className="pb-4">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
@@ -372,7 +372,7 @@ const DiseasePage = () => {
 
           {image && !result && (
             <div className="max-w-2xl mx-auto mt-4">
-              <Card className="border-2 border-dashed">
+              <Card className="border-2 border-dashed hover:shadow-sm transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex justify-between gap-4">
                     <Button
@@ -387,7 +387,7 @@ const DiseasePage = () => {
                       onClick={analyzeImage}
                       disabled={analyzing || !selectedCattle}
                       size="lg"
-                      className="flex items-center gap-2 flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex items-center gap-2 flex-1 bg-green-600 hover:bg-green-700 shadow-md"
                     >
                       {analyzing ? (
                         <>
@@ -409,7 +409,7 @@ const DiseasePage = () => {
 
           {result && (
             <div className="max-w-4xl mx-auto mt-6">
-              <Card className="border-2 border-dashed">
+              <Card className="border-2 border-dashed hover:shadow-sm transition-shadow">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
                     <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">

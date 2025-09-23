@@ -1,69 +1,122 @@
-import { useState } from "react";
-import { PieChart, BarChart3, LayoutDashboard, Building, Trees } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { PieChart, BarChart3, LayoutDashboard, Building, Trees, Users, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/components/ui/input";
+import { database } from "@/firebase/firebaseConfig";
+import { onValue, ref, update } from "firebase/database";
 
-const updateSchema = z.object({
-  insideCount: z.coerce.number().min(0, "Count cannot be negative"),
-  outsideCount: z.coerce.number().min(0, "Count cannot be negative"),
-});
+const RTDB_PATH = "/counters/cattle";
 
 const CountPage = () => {
   const [cattleData, setCattleData] = useState({
-    inside: 12,
-    outside: 8,
-    total: 20,
-    lastUpdated: "2 hours ago"
+    inside: 0,
+    outside: 0,
+    total: 0,
+    lastDelta: 0,
+    lastUpdatedMs: 0,
   });
-  
-  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [herdInput, setHerdInput] = useState(0);
   const [activeView, setActiveView] = useState("pieChart");
-  
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(updateSchema),
-    defaultValues: {
-      insideCount: cattleData.inside,
-      outsideCount: cattleData.outside,
+  const lastDeltaRef = useRef(0);
+  const [animKey, setAnimKey] = useState(0);
+  const [animDirection, setAnimDirection] = useState("right");
+  const [showAnim, setShowAnim] = useState(false);
+
+  useEffect(() => {
+    const r = ref(database, RTDB_PATH);
+    const unsub = onValue(
+      r,
+      (snap) => {
+        const val = snap.val() || {};
+        // Derive outside if device didn't send it
+        const next = {
+          inside: Number(val.inside || 0),
+          outside: Number(
+            val.outside != null ? val.outside : Math.max((val.total || 0) - (val.inside || 0), 0)
+          ),
+          total: Number(val.total || ((val.inside || 0) + (val.outside || 0))),
+          lastDelta: Number(val.lastDelta || 0),
+          lastUpdatedMs: Number(val.lastUpdatedMs || 0),
+        };
+        setCattleData(next);
+        setLoading(false);
+        if (typeof val.totalHerd === "number") {
+          setHerdInput(Number(val.totalHerd));
+        }
+
+        if (next.lastDelta && next.lastDelta !== 0) {
+          lastDeltaRef.current = next.lastDelta;
+          setAnimDirection(next.lastDelta > 0 ? "right" : "left");
+          setAnimKey((k) => k + 1);
+          setShowAnim(true);
+          setTimeout(() => setShowAnim(false), 1200);
+        }
+      },
+      (err) => {
+        console.error(err);
+        setLoading(false);
+        toast.error("Failed to load live counts");
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  const handleReset = async () => {
+    try {
+      await update(ref(database, RTDB_PATH), {
+        inside: 0,
+        outside: 0,
+        total: 0,
+        lastDelta: 0,
+        lastUpdatedMs: Date.now(),
+      });
+      toast.success("Counts reset");
+    } catch (e) {
+      console.error(e);
+      toast.error("Reset failed");
     }
-  });
-  
-  const onUpdateSubmit = (data) => {
-    const newTotal = data.insideCount + data.outsideCount;
-    
-    setCattleData({
-      inside: data.insideCount,
-      outside: data.outsideCount,
-      total: newTotal,
-      lastUpdated: "Just now"
-    });
-    
-    setUpdateDialogOpen(false);
-    toast.success("Cattle count updated successfully!");
   };
 
-  return (
-    <MainLayout>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Cattle Count Page</h2>
-        <p className="text-center text-muted-foreground text-2xl pt-8">
-          Coming Soon...
-        </p>
-      </div>
-    </MainLayout>
-  )
+  const handleSaveHerd = async () => {
+    const herd = Number(herdInput) || 0;
+    if (herd < 0) {
+      toast.error("Herd size cannot be negative");
+      return;
+    }
+    try {
+      const outside = Math.max(herd - (cattleData.inside || 0), 0);
+      await update(ref(database, RTDB_PATH), {
+        totalHerd: herd,
+        total: herd,
+        outside,
+        lastUpdatedMs: Date.now(),
+      });
+      toast.success("Herd size saved");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to save herd size");
+    }
+  };
+
+  // return (
+  //   <MainLayout>
+  //     <div className="mb-6">
+  //       <h2 className="text-2xl font-bold mb-2">Cattle Count Page</h2>
+  //       <p className="text-center text-muted-foreground text-2xl pt-8">
+  //         Coming Soon...
+  //       </p>
+  //     </div>
+  //   </MainLayout>
+  // )
   
   // Render pie chart visualization
   const renderPieChart = () => {
-    const insidePercentage = Math.round((cattleData.inside / cattleData.total) * 100) || 0;
+    const insidePercentage = Math.round(((cattleData.total ? cattleData.inside / cattleData.total : 0) * 100)) || 0;
     const outsidePercentage = 100 - insidePercentage;
     
     return (
@@ -198,51 +251,28 @@ const CountPage = () => {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Cattle Count</h2>
-        
-        <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">Update Count</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Update Cattle Count</DialogTitle>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit(onUpdateSubmit)} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="insideCount">Inside Ground</Label>
-                <Input 
-                  id="insideCount" 
-                  type="number"
-                  {...register("insideCount")}
-                />
-                {errors.insideCount && (
-                  <p className="text-red-500 text-xs">{errors.insideCount.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="outsideCount">Outside Ground</Label>
-                <Input 
-                  id="outsideCount" 
-                  type="number"
-                  {...register("outsideCount")}
-                />
-                {errors.outsideCount && (
-                  <p className="text-red-500 text-xs">{errors.outsideCount.message}</p>
-                )}
-              </div>
-              
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setUpdateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Update</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <h2 className="text-3xl font-bold tracking-tight">Cattle Count</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm hidden md:inline">Total herd</span>
+            <Input
+              className="h-9 w-28"
+              type="number"
+              value={herdInput}
+              onChange={(e) => setHerdInput(e.target.value)}
+            />
+            <Button size="sm" variant="secondary" onClick={handleSaveHerd} className="gap-1">
+              <Save className="h-3.5 w-3.5" /> Save
+            </Button>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${loading ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+              {loading ? 'Connecting…' : 'Live'}
+            </span>
+            <span>Updated: {cattleData.lastUpdatedMs ? new Date(cattleData.lastUpdatedMs).toLocaleTimeString() : '-'}</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleReset}>Reset</Button>
+        </div>
       </div>
       
       <Card className="mb-6">
@@ -251,7 +281,7 @@ const CountPage = () => {
             <div>
               <CardTitle className="text-lg">Cattle Distribution</CardTitle>
               <CardDescription>
-                Last updated {cattleData.lastUpdated}
+                Total: <span className="font-semibold">{cattleData.total}</span>
               </CardDescription>
             </div>
             
@@ -290,27 +320,38 @@ const CountPage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {activeView === "pieChart" && renderPieChart()}
-          {activeView === "barChart" && renderBarChart()}
-          {activeView === "visual" && renderVisualLayout()}
-          
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
             <Card>
-              <CardContent className="p-4 flex flex-col items-center justify-center">
-                <Building className="h-5 w-5 mb-2 text-primary" />
-                <span className="text-2xl font-bold">{cattleData.inside}</span>
-                <span className="text-sm text-muted-foreground">Inside Ground</span>
+              <CardContent className="p-4 flex items-center gap-3">
+                <Users className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                  <div className="text-xl font-bold">{cattleData.total}</div>
+                </div>
               </CardContent>
             </Card>
-            
             <Card>
-              <CardContent className="p-4 flex flex-col items-center justify-center">
-                <Trees className="h-5 w-5 mb-2 text-muted-foreground" />
-                <span className="text-2xl font-bold">{cattleData.outside}</span>
-                <span className="text-sm text-muted-foreground">Outside Ground</span>
+              <CardContent className="p-4 flex items-center gap-3">
+                <Building className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="text-xs text-muted-foreground">Inside</div>
+                  <div className="text-xl font-bold">{cattleData.inside}</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <Trees className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="text-xs text-muted-foreground">Outside</div>
+                  <div className="text-xl font-bold">{cattleData.outside}</div>
+                </div>
               </CardContent>
             </Card>
           </div>
+          {activeView === "pieChart" && renderPieChart()}
+          {activeView === "barChart" && renderBarChart()}
+          {activeView === "visual" && renderVisualLayout()}
         </CardContent>
       </Card>
       
@@ -324,6 +365,29 @@ const CountPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {showAnim && (
+        <div key={animKey} className="fixed bottom-6 left-0 right-0 pointer-events-none">
+          <div className="mx-auto w-full max-w-md">
+            <div
+              className={`mx-4 px-4 py-2 rounded-full shadow-md text-white font-semibold 
+                ${animDirection === "right" ? "bg-green-600" : "bg-red-600"}
+                animate-[slide_1.1s_ease-out_forwards]
+              `}
+            >
+              {lastDeltaRef.current > 0 ? `+${lastDeltaRef.current}` : `${lastDeltaRef.current}`}
+            </div>
+          </div>
+          <style>{`
+            @keyframes slide {
+              0% { opacity: 0; transform: translateY(12px); }
+              20% { opacity: 1; }
+              80% { opacity: 1; }
+              100% { opacity: 0; transform: translateY(-10px); }
+            }
+          `}</style>
+        </div>
+      )}
     </MainLayout>
   );
 };

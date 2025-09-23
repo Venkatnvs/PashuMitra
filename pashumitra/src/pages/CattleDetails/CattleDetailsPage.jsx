@@ -399,7 +399,7 @@ const CattleDetailsPage = () => {
       <div className="container mx-auto p-6">
         <Button 
           variant="ghost" 
-          className="mb-6" 
+          className="mb-6 hover:bg-muted/60" 
           onClick={() => navigate('/')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -407,9 +407,9 @@ const CattleDetailsPage = () => {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 hover:shadow-sm transition-shadow">
             <CardHeader>
-              <CardTitle>Cattle Details</CardTitle>
+              <CardTitle className="tracking-tight">Cattle Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -438,7 +438,7 @@ const CattleDetailsPage = () => {
           </Card>
 
           <div className="lg:col-span-2 space-y-6">
-            <Card>
+            <Card className="hover:shadow-sm transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center">
                   <CalendarIcon className="h-5 w-5 mr-2" />
@@ -488,12 +488,12 @@ const CattleDetailsPage = () => {
                             }}
                           >
                             <div className="flex-1">
-                              <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
                                 <p className="font-medium">
                                   {format(new Date(event.date), 'MMMM d, yyyy')}
                                 </p>
                                 {completed && (
-                                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                                     Completed
                                   </span>
                                 )}
@@ -501,11 +501,11 @@ const CattleDetailsPage = () => {
                               <p className="text-sm text-muted-foreground">
                                 {event.isInjection ? 'Injection' : 'Note'}: {event.note}
                               </p>
-                              {event.isRepeated && nextDate && isOccurrenceCompleted(event, event.date) && (
-                                <p className="text-sm text-blue-600 mt-1">
-                                  Next scheduled: {format(nextDate, 'MMMM d, yyyy')}
-                                </p>
-                              )}
+                          {event.isRepeated && nextDate && isOccurrenceCompleted(event, event.date) && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              Next: {format(nextDate, 'MMM d, yyyy')}
+                            </p>
+                          )}
                             </div>
                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button

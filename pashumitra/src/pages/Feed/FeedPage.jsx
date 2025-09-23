@@ -1,302 +1,162 @@
-import { useState } from "react";
-import { Plus, Minus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import MainLayout from "@/components/layout/MainLayout";
-import { DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Dialog } from "@/components/ui/dialog";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Power, Unlock, Lock, RotateCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-
-const feedSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  quantity: z.coerce.number().positive("Quantity must be positive"),
-  unit: z.string().min(1, "Unit is required"),
-});
+import { useEffect, useState } from "react";
+import { database } from "@/firebase/firebaseConfig";
+import { onValue, ref, set } from "firebase/database";
 
 const FeedPage = () => {
-  const [feeds, setFeeds] = useState([
-    { id: 1, name: "Hay", quantity: 250, unit: "kg", lastUpdated: "2 days ago" },
-    { id: 2, name: "Grain", quantity: 85, unit: "kg", lastUpdated: "1 day ago" },
-    { id: 3, name: "Silage", quantity: 120, unit: "kg", lastUpdated: "5 days ago" },
-  ]);
-  
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const [selectedFeed, setSelectedFeed] = useState(null);
+  const [status, setStatus] = useState({
+    weight: 0,
+    motorState: "STOPPED",
+    servoPosition: 70,
+    updatedMs: 0,
+  });
+
+  useEffect(() => {
+    const r = ref(database, "/feeder/status");
+    const unsub = onValue(r, (snap) => {
+      const v = snap.val() || {};
+      setStatus({
+        weight: Number(v.weight || 0),
+        motorState: String(v.motorState || "STOPPED"),
+        servoPosition: Number(v.servoPosition || 70),
+        updatedMs: Number(v.updatedMs || 0),
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  const sendMotor = async (cmd) => {
+    // Optimistic update for snappy UI
+    setStatus((s) => ({ ...s, motorState: cmd === "stop" ? "STOPPED" : cmd.toUpperCase() }));
+    await set(ref(database, "/feeder/commands/motor"), cmd);
+  };
+  const sendServo = async (cmd) => {
+    // Optimistic update for snappy UI (firmware supports only open/close)
+    setStatus((s) => ({ ...s, servoPosition: cmd === "open" ? 180 : 70 }));
+    await set(ref(database, "/feeder/commands/servo"), cmd);
+  };
+
+  const sendTare = async () => {
+    await set(ref(database, "/feeder/commands/tare"), "tare");
+    await set(ref(database, "/feeder/status/weight"), 0);
+  };
+
+  // Normal button controls: click to start, separate Stop to halt
+
+  // Note: Motor controls are push-to-run. No tap pulse fallback to ensure true hold behavior.
 
   return (
     <MainLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Feed Page</h2>
-        <p className="text-center text-muted-foreground text-2xl pt-8">
-          Coming Soon...
-        </p>
+        <h2 className="text-3xl font-bold tracking-tight">Feeder Control</h2>
+        <p className="text-muted-foreground">Control via Firebase bridge</p>
       </div>
-    </MainLayout>
-  )
-  
-  const addForm = useForm({
-    resolver: zodResolver(feedSchema),
-    defaultValues: {
-      name: "",
-      quantity: "",
-      unit: "kg",
-    }
-  });
-  
-  const updateForm = useForm({
-    resolver: zodResolver(z.object({
-      quantity: z.coerce.number(),
-    })),
-    defaultValues: {
-      quantity: 0,
-    }
-  });
-  
-  const onAddSubmit = (data) => {
-    const newFeed = {
-      id: feeds.length + 1,
-      ...data,
-      lastUpdated: "Just now",
-    };
-    
-    setFeeds([...feeds, newFeed]);
-    setAddDialogOpen(false);
-    addForm.reset();
-    toast.success("New feed added successfully!");
-  };
 
-  const openUpdateDialog = (feed) => {
-    setSelectedFeed(feed);
-    updateForm.setValue("quantity", 0);
-    setUpdateDialogOpen(true);
-  };
-  
-  const onUpdateSubmit = (data) => {
-    if (!selectedFeed) return;
-    
-    const updatedFeeds = feeds.map(feed => {
-      if (feed.id === selectedFeed.id) {
-        return {
-          ...feed,
-          quantity: feed.quantity + data.quantity,
-          lastUpdated: "Just now",
-        };
-      }
-      return feed;
-    });
-    
-    setFeeds(updatedFeeds);
-    setUpdateDialogOpen(false);
-    updateForm.reset();
-    toast.success(`Feed ${data.quantity > 0 ? "added" : "removed"} successfully!`);
-  };
-  
-  const totalFeed = feeds.reduce((total, feed) => {
-    return total + feed.quantity;
-  }, 0);
-
-  return (
-    <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Feed Inventory</h2>
-        
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Feed
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Feed</DialogTitle>
-              <DialogDescription>
-                Add a new type of feed to your inventory.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Feed Name</Label>
-                <Input id="name" {...addForm.register("name")} />
-                {addForm.formState.errors.name && (
-                  <p className="text-red-500 text-xs">{addForm.formState.errors.name.message}</p>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input 
-                    id="quantity" 
-                    type="number"
-                    {...addForm.register("quantity")}
-                  />
-                  {addForm.formState.errors.quantity && (
-                    <p className="text-red-500 text-xs">{addForm.formState.errors.quantity.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="unit">Unit</Label>
-                  <Input id="unit" {...addForm.register("unit")} />
-                  {addForm.formState.errors.unit && (
-                    <p className="text-red-500 text-xs">{addForm.formState.errors.unit.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Add Feed</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      <Card className="mb-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Total Feed Available</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4">
-            <div className="text-center">
-              <p className="text-5xl font-bold mb-2">{totalFeed}</p>
-              <p className="text-muted-foreground">kilograms</p>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="border-2 border-dashed lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-end gap-3">
+              <div className="text-5xl font-extrabold tracking-tight">{status.weight.toFixed(3)}</div>
+              <span className="text-muted-foreground mb-1">kg</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <h3 className="text-lg font-semibold mb-4">Feed Breakdown</h3>
-      
-      <div className="space-y-4">
-        {feeds.map((feed) => (
-          <Card key={feed.id}>
-            <div className="p-4">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium">{feed.name}</h4>
-                <span className="text-sm text-muted-foreground">
-                  Updated {feed.lastUpdated}
-                </span>
+            <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 bg-primary"
+                style={{ width: `${Math.min(100, Math.max(0, (status.weight / 10) * 100))}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="p-3 rounded-md bg-muted">
+                <p className="text-muted-foreground">Motor</p>
+                <p className="font-medium">{status.motorState}</p>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold">
-                  {feed.quantity} <span className="text-sm font-normal">{feed.unit}</span>
-                </p>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    size="icon" 
-                    variant="outline"
-                    onClick={() => {
-                      openUpdateDialog(feed);
-                      updateForm.setValue("quantity", -10);
-                    }}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button 
-                    size="icon"
-                    onClick={() => {
-                      openUpdateDialog(feed);
-                      updateForm.setValue("quantity", 10);
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="p-3 rounded-md bg-muted">
+                <p className="text-muted-foreground">Servo</p>
+                <p className="font-medium">{status.servoPosition}</p>
               </div>
             </div>
-          </Card>
-        ))}
-      </div>
-      
-      <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Feed Quantity</DialogTitle>
-            <DialogDescription>
-              {selectedFeed && `Update the quantity of ${selectedFeed.name}.`}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedFeed && (
-            <form onSubmit={updateForm.handleSubmit(onUpdateSubmit)} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="update-quantity">Quantity ({selectedFeed.unit})</Label>
-                <div className="flex items-center">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={() => {
-                      const current = updateForm.getValues("quantity");
-                      updateForm.setValue("quantity", current - 5);
-                    }}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input 
-                    id="update-quantity" 
-                    className="text-center mx-2"
-                    type="number"
-                    {...updateForm.register("quantity")}
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={() => {
-                      const current = updateForm.getValues("quantity");
-                      updateForm.setValue("quantity", current + 5);
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {updateForm.formState.errors.quantity && (
-                  <p className="text-red-500 text-xs">{updateForm.formState.errors.quantity.message}</p>
-                )}
-              </div>
-              
-              <Separator />
-              
-              <div className="pt-2">
-                <p className="text-sm mb-2">Result:</p>
-                <p className="font-medium">
-                  {selectedFeed.quantity} {selectedFeed.unit} {' '}
-                  <span className={updateForm.watch("quantity") >= 0 ? "text-green-500" : "text-red-500"}>
-                    {updateForm.watch("quantity") >= 0 ? '+' : ''}{updateForm.watch("quantity")}
-                  </span>
-                  {' = '}
-                  <span className="font-bold">
-                    {selectedFeed.quantity + updateForm.watch("quantity")} {selectedFeed.unit}
-                  </span>
-                </p>
-              </div>
-              
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setUpdateDialogOpen(false)}>
-                  Cancel
+            <div>
+              <Button onClick={sendTare} variant="secondary" className="w-full">
+                <RotateCw className="h-4 w-4 mr-2" /> Zero Scale
+              </Button>
+            </div>
+            <div className="mt-2 rounded-lg overflow-hidden bg-muted/50">
+              <img src="/logo.webp" alt="Feeder" className="w-full h-28 object-cover opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-dashed lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="tracking-tight">Motor Control</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-w-xs mx-auto">
+              <div className="grid grid-cols-3 gap-2">
+                <div />
+                <Button
+                  onClick={() => sendMotor("forward")}
+                  className="h-16 w-16 rounded-full bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-lg hover:scale-105 active:scale-95 transition-transform"
+                  title="Forward (hold)"
+                >
+                  <ChevronUp className="h-6 w-6" />
                 </Button>
-                <Button type="submit">Update</Button>
+                <div />
+
+                <div />
+                <Button onClick={() => sendMotor("stop")} variant="destructive" className="h-16 w-16 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-transform" title="Stop">
+                  <Power className="h-6 w-6" />
+                </Button>
+                <div />
+
+                <div />
+                <Button
+                  onClick={() => sendMotor("backward")}
+                  className="h-16 w-16 rounded-full bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-lg hover:scale-105 active:scale-95 transition-transform"
+                  title="Backward (hold)"
+                >
+                  <ChevronDown className="h-6 w-6" />
+                </Button>
+                <div />
               </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-dashed lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="tracking-tight">Servo Control</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={() => sendServo("open")} className="h-12 rounded-full bg-gradient-to-b from-green-600 to-green-500 text-white shadow-md hover:scale-105 active:scale-95 transition-transform">
+                <Unlock className="h-5 w-5 mr-2" /> Open
+              </Button>
+              <Button onClick={() => sendServo("close")} variant="secondary" className="h-12 rounded-full bg-gradient-to-b from-amber-600 to-amber-500 text-white shadow-md hover:scale-105 active:scale-95 transition-transform">
+                <Lock className="h-5 w-5 mr-2" /> Close
+              </Button>
+            </div>
+            <div className="pt-2">
+              <div className="text-sm text-muted-foreground mb-2">Position</div>
+              <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: `${Math.max(0, Math.min(100, ((status.servoPosition - 70) / (180 - 70)) * 100))}%`
+                  }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </MainLayout>
   );
 };

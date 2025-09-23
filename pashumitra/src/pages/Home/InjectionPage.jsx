@@ -34,6 +34,7 @@ const InjectionPage = () => {
   const streamRef = useRef(null);
   const navigate = useNavigate();
   const [nextInjections, setNextInjections] = useState({});
+  const [query, setQuery] = useState("");
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(cattleSchema),
@@ -213,14 +214,23 @@ const InjectionPage = () => {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">My Cattles</h2>
+        <h2 className="text-3xl font-bold tracking-tight">My Cattles</h2>
+        
+        <div className="hidden sm:flex items-center gap-2">
+          <Input
+            placeholder="Search by name or type..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-64 h-9"
+          />
+        </div>
         
         <Dialog open={open} onOpenChange={(isOpen) => {
           if (!isOpen) closeDialog();
           setOpen(isOpen);
         }}>
           <DialogTrigger asChild>
-            <Button size="icon" className="rounded-full">
+            <Button size="icon" className="rounded-full bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-md hover:scale-105 active:scale-95 transition-transform">
               <Plus className="h-5 w-5" />
             </Button>
           </DialogTrigger>
@@ -353,12 +363,18 @@ const InjectionPage = () => {
         ) : cattles.length === 0 ? (
           <div className="flex flex-col justify-center items-center h-64">
             <p className="text-muted-foreground mb-4">No cattle added yet</p>
-            <Button onClick={() => setOpen(true)}>Add Your First Cattle</Button>
+            <Button onClick={() => setOpen(true)} className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm">Add Your First Cattle</Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {cattles.map((cattle) => (
-              <Card key={cattle.id} className="relative overflow-hidden h-full flex flex-col p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {cattles
+              .filter(c => {
+                if (!query.trim()) return true;
+                const q = query.toLowerCase();
+                return (c.name || "").toLowerCase().includes(q) || (c.type || "").toLowerCase().includes(q);
+              })
+              .map((cattle) => (
+              <Card key={cattle.id} className="relative overflow-hidden h-full flex flex-col p-2 hover:shadow-lg transition-shadow">
                 <div 
                   className={`absolute top-0 left-0 w-1 h-full ${
                     cattle.status === "Sick" ? "bg-red-500" : "bg-green-500"
@@ -415,7 +431,7 @@ const InjectionPage = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full"
+                    className="w-full hover:scale-[1.02] transition-transform"
                     onClick={() => navigate(`/cattle/${cattle.id}`)}
                   >
                     View Details
