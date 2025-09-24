@@ -213,9 +213,20 @@ const InjectionPage = () => {
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold tracking-tight">My Cattles</h2>
-        
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">My Cattles</h2>
+
+        {/* Mobile search */}
+        <div className="sm:hidden">
+          <Input
+            placeholder="Search by name or type..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-10"
+          />
+        </div>
+
+        {/* Desktop actions */}
         <div className="hidden sm:flex items-center gap-2">
           <Input
             placeholder="Search by name or type..."
@@ -224,7 +235,7 @@ const InjectionPage = () => {
             className="w-64 h-9"
           />
         </div>
-        
+
         <Dialog open={open} onOpenChange={(isOpen) => {
           if (!isOpen) closeDialog();
           setOpen(isOpen);
@@ -235,7 +246,7 @@ const InjectionPage = () => {
             </Button>
           </DialogTrigger>
           
-          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[500px] sm:rounded-lg rounded-none max-w-[100vw] sm:h-auto h-[100dvh] max-h-[100dvh] overflow-y-auto p-4">
             <DialogHeader>
               <DialogTitle>Add New Cattle</DialogTitle>
             </DialogHeader>
@@ -248,7 +259,7 @@ const InjectionPage = () => {
                       ref={videoRef}
                       autoPlay
                       playsInline
-                      className="w-full h-[250px] object-cover rounded-lg"
+                      className="w-full h-[220px] sm:h-[250px] object-cover rounded-lg"
                     />
                     
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
@@ -265,7 +276,7 @@ const InjectionPage = () => {
                       <Button 
                         type="button" 
                         variant="secondary" 
-                        className="rounded-full" 
+                        className="rounded-full px-6"
                         onClick={captureImage}
                       >
                         Capture
@@ -287,7 +298,7 @@ const InjectionPage = () => {
                     <img 
                       src={capturedImage} 
                       alt="Captured" 
-                      className="w-full h-[250px] object-cover rounded-lg"
+                      className="w-full h-[220px] sm:h-[250px] object-cover rounded-lg"
                     />
                     
                     <Button 
@@ -305,7 +316,7 @@ const InjectionPage = () => {
                   </div>
                 ) : (
                   <div 
-                    className="flex flex-col items-center justify-center h-[250px] border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="flex flex-col items-center justify-center h-[220px] sm:h-[250px] border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={startCamera}
                   >
                     <Camera className="h-10 w-10 mb-2 text-muted-foreground" />
@@ -317,36 +328,37 @@ const InjectionPage = () => {
                 )}
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
+                  <Label htmlFor="name" className="text-right hidden sm:block">Name</Label>
                   <Input 
                     id="name" 
-                    className="col-span-3" 
+                    placeholder="Name"
+                    className="col-span-4 sm:col-span-3" 
                     {...register("name")}
                   />
                   {errors.name && (
-                    <p className="text-red-500 text-xs col-start-2 col-span-3">{errors.name.message}</p>
+                    <p className="text-red-500 text-xs col-span-4 sm:col-start-2 sm:col-span-3">{errors.name.message}</p>
                   )}
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="type" className="text-right">Type</Label>
+                  <Label htmlFor="type" className="text-right hidden sm:block">Type</Label>
                   <Input 
                     id="type" 
-                    className="col-span-3" 
+                    className="col-span-4 sm:col-span-3" 
                     placeholder="Cow, Bull, etc."
                     {...register("type")}
                   />
                   {errors.type && (
-                    <p className="text-red-500 text-xs col-start-2 col-span-3">{errors.type.message}</p>
+                    <p className="text-red-500 text-xs col-span-4 sm:col-start-2 sm:col-span-3">{errors.type.message}</p>
                   )}
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" type="button" onClick={closeDialog}>
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button variant="outline" type="button" onClick={closeDialog} className="w-full sm:w-auto">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                   {loading ? "Adding..." : "Add Cattle"}
                 </Button>
               </div>
@@ -355,7 +367,7 @@ const InjectionPage = () => {
         </Dialog>
       </div>
       
-      <ScrollArea className="h-[calc(100vh-13rem)]">
+      <ScrollArea className="h-[calc(100vh-12rem)] sm:h-[calc(100vh-13rem)]">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <p>Loading cattle...</p>
@@ -363,7 +375,7 @@ const InjectionPage = () => {
         ) : cattles.length === 0 ? (
           <div className="flex flex-col justify-center items-center h-64">
             <p className="text-muted-foreground mb-4">No cattle added yet</p>
-            <Button onClick={() => setOpen(true)} className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm">Add Your First Cattle</Button>
+            <Button onClick={() => setOpen(true)} className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm w-full sm:w-auto">Add Your First Cattle</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -384,8 +396,8 @@ const InjectionPage = () => {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle>{cattle.name}</CardTitle>
-                      <CardDescription>{cattle.type}</CardDescription>
+                      <CardTitle className="text-base sm:text-lg">{cattle.name}</CardTitle>
+                      <CardDescription className="text-sm">{cattle.type}</CardDescription>
                     </div>
                     <div className="flex gap-1">
                       <Button 
@@ -401,7 +413,7 @@ const InjectionPage = () => {
                 </CardHeader>
                 
                 <CardContent className="flex-grow">
-                  <div className="aspect-video mb-4 overflow-hidden rounded-md bg-muted">
+                  <div className="aspect-video mb-3 sm:mb-4 overflow-hidden rounded-md bg-muted">
                     {cattle.image ? (
                       <img 
                         src={cattle.image} 
@@ -415,7 +427,7 @@ const InjectionPage = () => {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                     <div>
                       <p className="text-muted-foreground">Type</p>
                       <p>{cattle.type}</p>
@@ -430,7 +442,7 @@ const InjectionPage = () => {
                 <CardFooter>
                   <Button 
                     variant="outline" 
-                    size="sm" 
+                    size="sm"
                     className="w-full hover:scale-[1.02] transition-transform"
                     onClick={() => navigate(`/cattle/${cattle.id}`)}
                   >

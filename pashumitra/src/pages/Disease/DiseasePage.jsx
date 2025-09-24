@@ -208,9 +208,9 @@ const DiseasePage = () => {
   return (
     <MainLayout>
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2">Disease Detection</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Disease Detection</h2>
             <p className="text-muted-foreground">
               Use AI-powered analysis to detect potential diseases in your cattle
             </p>
@@ -218,7 +218,7 @@ const DiseasePage = () => {
           <Button
             variant="outline"
             onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center gap-2 hover:bg-muted/50"
+            className="flex items-center gap-2 hover:bg-muted/50 h-9 sm:h-10"
           >
             <History className="h-4 w-4" />
             {showHistory ? 'Hide History' : 'View History'}
@@ -297,7 +297,7 @@ const DiseasePage = () => {
                 <Tabs value={activeTab} className="w-full flex items-center justify-center">
                   <TabsContent value="camera" className="mt-0 flex items-center justify-center">
                     {!image ? (
-                      <div className="aspect-[4/3] relative bg-muted max-h-80 flex items-center justify-center">
+                      <div className="relative bg-muted w-full h-[220px] sm:h-[320px] flex items-center justify-center rounded-md overflow-hidden">
                         <video
                           ref={videoRef}
                           autoPlay
@@ -309,7 +309,7 @@ const DiseasePage = () => {
                             <Button
                               onClick={captureImage}
                               size="lg"
-                              className="rounded-full h-20 w-20 p-0 shadow-xl hover:scale-110 transition-all duration-300 bg-green-600 hover:bg-green-700 border-4 border-white"
+                              className="rounded-full h-16 w-16 sm:h-20 sm:w-20 p-0 shadow-xl hover:scale-110 transition-all duration-300 bg-green-600 hover:bg-green-700 border-4 border-white"
                             >
                               <Camera className="h-10 w-10" />
                             </Button>
@@ -318,7 +318,7 @@ const DiseasePage = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="aspect-[4/3] relative bg-muted max-h-80 flex items-center justify-center">
+                      <div className="relative bg-muted w-full h-[220px] sm:h-[320px] flex items-center justify-center rounded-md overflow-hidden">
                         <img
                           src={image}
                           alt="Captured"
@@ -330,7 +330,7 @@ const DiseasePage = () => {
 
                   <TabsContent value="upload" className="mt-0">
                     {!image ? (
-                      <div className="aspect-[4/3] flex flex-col items-center justify-center bg-muted p-6 max-h-80">
+                      <div className="flex flex-col items-center justify-center bg-muted p-6 w-full h-[220px] sm:h-[320px] rounded-md">
                         <div className="text-center">
                           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Upload className="h-10 w-10 text-primary" />
@@ -356,7 +356,7 @@ const DiseasePage = () => {
                         />
                       </div>
                     ) : (
-                      <div className="aspect-[4/3] relative bg-muted max-h-80 flex items-center justify-center">
+                      <div className="relative bg-muted w-full h-[220px] sm:h-[320px] flex items-center justify-center rounded-md overflow-hidden">
                         <img
                           src={image}
                           alt="Uploaded"
@@ -374,11 +374,11 @@ const DiseasePage = () => {
             <div className="max-w-2xl mx-auto mt-4">
               <Card className="border-2 border-dashed hover:shadow-sm transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4">
                     <Button
                       variant="outline"
                       onClick={resetProcess}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 w-full sm:w-auto"
                     >
                       <RotateCcw className="h-4 w-4" />
                       Reset
@@ -387,7 +387,7 @@ const DiseasePage = () => {
                       onClick={analyzeImage}
                       disabled={analyzing || !selectedCattle}
                       size="lg"
-                      className="flex items-center gap-2 flex-1 bg-green-600 hover:bg-green-700 shadow-md"
+                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 shadow-md w-full sm:flex-1"
                     >
                       {analyzing ? (
                         <>
@@ -582,7 +582,7 @@ const DiseasePage = () => {
 
       {/* Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[100vw] sm:max-w-3xl h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto rounded-none sm:rounded-lg p-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />

@@ -354,17 +354,6 @@ const CountPage = () => {
           {activeView === "visual" && renderVisualLayout()}
         </CardContent>
       </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Distribution History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-6 text-center text-muted-foreground">
-            <p>History charts will appear here as you update counts</p>
-          </div>
-        </CardContent>
-      </Card>
 
       {showAnim && (
         <div key={animKey} className="fixed bottom-6 left-0 right-0 pointer-events-none">
