@@ -205,27 +205,63 @@ async function checkAndSendInjectionNotifications() {
 
 // Vercel serverless function handler
 module.exports = async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  // Only allow GET requests for cron
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+  console.log('Function started');
+  
   try {
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
+
+    // Only allow GET requests for cron
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    console.log('Checking environment variables...');
+    
+    // Check required environment variables
+    const requiredEnvVars = [
+      'FIREBASE_PROJECT_ID',
+      'FIREBASE_PRIVATE_KEY', 
+      'FIREBASE_CLIENT_EMAIL',
+      'EMAIL_HOST',
+      'EMAIL_PORT',
+      'EMAIL_USER',
+      'EMAIL_PASS',
+      'NOTIFICATION_EMAIL'
+    ];
+    
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      console.error('Missing environment variables:', missingVars);
+      return res.status(500).json({ 
+        success: false, 
+        error: `Missing environment variables: ${missingVars.join(', ')}` 
+      });
+    }
+    
+    console.log('Environment variables OK');
+    console.log('Starting injection notification check...');
+    
     const result = await checkAndSendInjectionNotifications();
+    console.log('Function completed successfully:', result);
     res.status(200).json(result);
+    
   } catch (error) {
     console.error('Cron job error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack 
+    });
   }
 }
