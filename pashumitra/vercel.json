@@ -12,7 +12,7 @@
     }
   ],
   "functions": {
-    "server/server.js": {
+    "api/cron/injection-notifications.js": {
       "runtime": "nodejs18.x"
     }
   }
