@@ -38,6 +38,14 @@ function initializeEmail() {
     const nodemailer = require('nodemailer');
     
     console.log('Initializing email transporter...');
+    console.log('Email config:', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS ? '***' : 'NOT_SET',
+      notificationEmail: process.env.NOTIFICATION_EMAIL,
+      sendFromEmail: process.env.SEND_FROM_EMAIL
+    });
     
     transporter = nodemailer.createTransporter({
       host: process.env.EMAIL_HOST,
@@ -53,6 +61,8 @@ function initializeEmail() {
     return true;
   } catch (error) {
     console.error('Email initialization failed:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     return false;
   }
 }
@@ -144,7 +154,7 @@ function calculateNextInjectionDates(event) {
 async function sendEmailNotification(cattle, event, injectionDate) {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.SEND_FROM_EMAIL || process.env.EMAIL_USER,
       to: process.env.NOTIFICATION_EMAIL,
       subject: `Injection Reminder: ${cattle.name}`,
       html: `
@@ -264,7 +274,8 @@ module.exports = async function handler(req, res) {
       'EMAIL_PORT',
       'EMAIL_USER',
       'EMAIL_PASS',
-      'NOTIFICATION_EMAIL'
+      'NOTIFICATION_EMAIL',
+      'SEND_FROM_EMAIL'
     ];
     
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);

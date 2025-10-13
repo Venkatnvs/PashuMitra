@@ -30,7 +30,8 @@ module.exports = async function handler(req, res) {
       EMAIL_PORT: !!process.env.EMAIL_PORT,
       EMAIL_USER: !!process.env.EMAIL_USER,
       EMAIL_PASS: !!process.env.EMAIL_PASS,
-      NOTIFICATION_EMAIL: !!process.env.NOTIFICATION_EMAIL
+      NOTIFICATION_EMAIL: !!process.env.NOTIFICATION_EMAIL,
+      SEND_FROM_EMAIL: !!process.env.SEND_FROM_EMAIL
     };
     
     console.log('Environment variables status:', envVars);
