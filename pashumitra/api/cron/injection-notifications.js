@@ -16,7 +16,7 @@ function initializeFirebase() {
       initializeApp({
         credential: cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : '',
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         }),
         databaseURL: 'https://pashu-mitra-897fa-default-rtdb.asia-southeast1.firebasedatabase.app/'
@@ -47,7 +47,7 @@ function initializeEmail() {
       sendFromEmail: process.env.SEND_FROM_EMAIL
     });
     
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT),
       secure: false,
@@ -70,6 +70,9 @@ function initializeEmail() {
 // Helper function to get all cattle
 async function getAllCattle() {
   try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
     const snapshot = await db.ref('cattles').once('value');
     const data = snapshot.val() || {};
     return Object.keys(data).map(key => ({
@@ -85,6 +88,9 @@ async function getAllCattle() {
 // Helper function to get all events for a cattle
 async function getAllEvents(cattleId) {
   try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
     const snapshot = await db.ref(`cattles/${cattleId}/events`).once('value');
     const data = snapshot.val() || {};
     return Object.entries(data).map(([key, value]) => ({ id: key, ...value }));
@@ -97,6 +103,9 @@ async function getAllEvents(cattleId) {
 // Helper function to get sent notifications
 async function getSentNotifications() {
   try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
     const snapshot = await db.ref('notifications/sent').once('value');
     return snapshot.val() || {};
   } catch (error) {
@@ -108,6 +117,9 @@ async function getSentNotifications() {
 // Helper function to mark notification as sent
 async function markNotificationSent(cattleId, eventId, occurrenceDate) {
   try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
     const notificationKey = `${cattleId}_${eventId}_${occurrenceDate}`;
     await db.ref(`notifications/sent/${notificationKey}`).set({
       cattleId,
@@ -153,6 +165,10 @@ function calculateNextInjectionDates(event) {
 // Helper function to send email notification
 async function sendEmailNotification(cattle, event, injectionDate) {
   try {
+    if (!transporter) {
+      throw new Error('Email transporter not initialized');
+    }
+    
     const mailOptions = {
       from: process.env.SEND_FROM_EMAIL || process.env.EMAIL_USER,
       to: process.env.NOTIFICATION_EMAIL,
@@ -218,8 +234,13 @@ async function checkAndSendInjectionNotifications() {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           
-          const isDueToday = injectionDateTime.toDateString() === today.toDateString();
-          const isDueTomorrow = injectionDateTime.toDateString() === tomorrow.toDateString();
+          // Normalize dates to compare only date parts
+          const injectionDateStr = injectionDateTime.toISOString().split('T')[0];
+          const todayStr = today.toISOString().split('T')[0];
+          const tomorrowStr = tomorrow.toISOString().split('T')[0];
+          
+          const isDueToday = injectionDateStr === todayStr;
+          const isDueTomorrow = injectionDateStr === tomorrowStr;
           
           if (isDueToday || isDueTomorrow) {
             const emailSent = await sendEmailNotification(cattleItem, event, injectionDate);
