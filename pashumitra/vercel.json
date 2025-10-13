@@ -1,8 +1,19 @@
 {
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/"
-        }
-    ]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/injection-notifications",
+      "schedule": "*/15 * * * *"
+    }
+  ],
+  "functions": {
+    "server/server.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }
