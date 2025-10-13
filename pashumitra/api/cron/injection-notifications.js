@@ -1,7 +1,7 @@
 // Vercel serverless function for injection notifications
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getDatabase } from 'firebase-admin/database';
-import nodemailer from 'nodemailer';
+const { initializeApp, getApps, cert } = require('firebase-admin/app');
+const { getDatabase } = require('firebase-admin/database');
+const nodemailer = require('nodemailer');
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -204,7 +204,7 @@ async function checkAndSendInjectionNotifications() {
 }
 
 // Vercel serverless function handler
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

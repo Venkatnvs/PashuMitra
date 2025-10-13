@@ -10,10 +10,5 @@
       "path": "/api/cron/injection-notifications",
       "schedule": "0 9 * * *"
     }
-  ],
-  "functions": {
-    "server/server.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  ]
 }
