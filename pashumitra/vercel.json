@@ -8,7 +8,7 @@
   "crons": [
     {
       "path": "/api/cron/injection-notifications",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 9 * * *"
     }
   ],
   "functions": {
