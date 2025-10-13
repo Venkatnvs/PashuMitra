@@ -1,32 +1,61 @@
 // Vercel serverless function for injection notifications
-const { initializeApp, getApps, cert } = require('firebase-admin/app');
-const { getDatabase } = require('firebase-admin/database');
-const nodemailer = require('nodemailer');
+console.log('Function starting...');
+
+let db = null;
+let transporter = null;
 
 // Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    }),
-    databaseURL: 'https://pashu-mitra-897fa-default-rtdb.asia-southeast1.firebasedatabase.app/'
-  });
+function initializeFirebase() {
+  try {
+    const { initializeApp, getApps, cert } = require('firebase-admin/app');
+    const { getDatabase } = require('firebase-admin/database');
+    
+    console.log('Initializing Firebase...');
+    
+    if (!getApps().length) {
+      initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        }),
+        databaseURL: 'https://pashu-mitra-897fa-default-rtdb.asia-southeast1.firebasedatabase.app/'
+      });
+    }
+    
+    db = getDatabase();
+    console.log('Firebase initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Firebase initialization failed:', error);
+    return false;
+  }
 }
 
-const db = getDatabase();
-
-// Email transporter setup
-const transporter = nodemailer.createTransporter({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Initialize Email transporter
+function initializeEmail() {
+  try {
+    const nodemailer = require('nodemailer');
+    
+    console.log('Initializing email transporter...');
+    
+    transporter = nodemailer.createTransporter({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+    
+    console.log('Email transporter initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Email initialization failed:', error);
+    return false;
+  }
+}
 
 // Helper function to get all cattle
 async function getAllCattle() {
@@ -249,6 +278,23 @@ module.exports = async function handler(req, res) {
     }
     
     console.log('Environment variables OK');
+    
+    // Initialize Firebase
+    if (!initializeFirebase()) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Firebase initialization failed' 
+      });
+    }
+    
+    // Initialize Email
+    if (!initializeEmail()) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Email initialization failed' 
+      });
+    }
+    
     console.log('Starting injection notification check...');
     
     const result = await checkAndSendInjectionNotifications();
