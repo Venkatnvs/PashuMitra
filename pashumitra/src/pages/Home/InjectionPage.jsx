@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Settings, Camera, RotateCw, X, Trash2 } from "lucide-react";
+import { Plus, Settings, Camera, RotateCw, X, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -28,6 +28,7 @@ const InjectionPage = () => {
   const [capturedImage, setCapturedImage] = useState("");
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
+  const [imageMode, setImageMode] = useState("camera"); // "camera" or "upload"
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cattleToDelete, setCattleToDelete] = useState(null);
   const videoRef = useRef(null);
@@ -163,7 +164,7 @@ const InjectionPage = () => {
 
   const onSubmit = async (data) => {
     if (!data.image) {
-      toast.error("Please capture an image first");
+      toast.error("Please add an image first");
       return;
     }
     
@@ -185,8 +186,35 @@ const InjectionPage = () => {
   const closeDialog = () => {
     stopCamera();
     setCapturedImage("");
+    setImageMode("camera");
     reset();
     setOpen(false);
+  };
+
+  // Handle file upload
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please select an image file");
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size should be less than 5MB");
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageDataUrl = e.target.result;
+        setCapturedImage(imageDataUrl);
+        setValue("image", imageDataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDeleteClick = (cattle) => {
@@ -253,6 +281,32 @@ const InjectionPage = () => {
             
             <form onSubmit={handleSubmit(onSubmit)}>
               <div className="grid gap-4 py-4">
+                {/* Image Mode Selection */}
+                {!capturedImage && (
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      type="button"
+                      variant={imageMode === "camera" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setImageMode("camera")}
+                      className="flex-1"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Camera
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={imageMode === "upload" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setImageMode("upload")}
+                      className="flex-1"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                  </div>
+                )}
+
                 {isCameraOpen ? (
                   <div className="relative">
                     <video 
@@ -297,7 +351,7 @@ const InjectionPage = () => {
                   <div className="relative">
                     <img 
                       src={capturedImage} 
-                      alt="Captured" 
+                      alt="Selected" 
                       className="w-full h-[220px] sm:h-[250px] object-cover rounded-lg"
                     />
                     
@@ -314,13 +368,32 @@ const InjectionPage = () => {
                       <X className="h-5 w-5" />
                     </Button>
                   </div>
-                ) : (
+                ) : imageMode === "camera" ? (
                   <div 
                     className="flex flex-col items-center justify-center h-[220px] sm:h-[250px] border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={startCamera}
                   >
                     <Camera className="h-10 w-10 mb-2 text-muted-foreground" />
                     <p className="text-muted-foreground font-medium">Click to take a photo</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[220px] sm:h-[250px] border-2 border-dashed rounded-lg hover:bg-muted/50 transition-colors">
+                    <Upload className="h-10 w-10 mb-2 text-muted-foreground" />
+                    <p className="text-muted-foreground font-medium mb-2">Upload an image</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
+                    >
+                      Choose File
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">Max size: 5MB</p>
                   </div>
                 )}
                 {errors.image && (
@@ -390,16 +463,16 @@ const InjectionPage = () => {
                 <div 
                   className={`absolute top-0 left-0 w-1 h-full ${
                     cattle.status === "Sick" ? "bg-red-500" : "bg-green-500"
-                  }`} 
+                  }`}
                 />
                 
-                <CardHeader className="pb-2">
+                <CardHeader className="py-0">
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-base sm:text-lg">{cattle.name}</CardTitle>
                       <CardDescription className="text-sm">{cattle.type}</CardDescription>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex">
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -412,8 +485,8 @@ const InjectionPage = () => {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="flex-grow">
-                  <div className="aspect-video mb-3 sm:mb-4 overflow-hidden rounded-md bg-muted">
+                <CardContent className="flex-grow py-0">
+                  <div className="aspect-video mb-2 overflow-hidden rounded-md bg-muted">
                     {cattle.image ? (
                       <img 
                         src={cattle.image} 
@@ -432,7 +505,7 @@ const InjectionPage = () => {
                       <p className="text-muted-foreground">Type</p>
                       <p>{cattle.type}</p>
                     </div>
-                    <div className="mt-2">
+                    <div>
                       <p className="text-muted-foreground">Next Injection</p>
                       <p>{nextInjections[cattle.id] ? new Date(nextInjections[cattle.id]).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "None scheduled"}</p>
                     </div>
