@@ -10,21 +10,56 @@ export const analyzeCattleImage = async (imageBase64) => {
     try {
         if (DEMO_MODE) {
             await new Promise(resolve => setTimeout(resolve, 2000));
-            return {
-                disease: "Foot and Mouth Disease",
-                confidence: 87,
-                symptoms: ["Blisters on mouth and feet", "Excessive salivation", "Lameness"],
-                severity: "high",
-                treatment: "Immediate isolation and contact veterinarian. Disinfect affected areas.",
-                description: "Highly contagious viral disease affecting cattle, causing blisters and lameness.",
-                recommendations: [
-                    "Isolate the affected animal immediately",
-                    "Contact a veterinarian for proper diagnosis",
-                    "Disinfect all equipment and areas",
-                    "Monitor other cattle for symptoms",
-                    "Follow quarantine protocols"
-                ]
-            };
+            
+            // Random demo responses for testing
+            const demoResponses = [
+                {
+                    disease: "No disease detected",
+                    confidence: 95,
+                    symptoms: ["Normal posture", "Clear eyes", "Healthy coat condition"],
+                    severity: "none",
+                    treatment: "No treatment needed - animal appears healthy",
+                    description: "The cattle appears to be in good health with no visible signs of disease or distress.",
+                    recommendations: [
+                        "Continue regular health monitoring",
+                        "Maintain proper nutrition and care",
+                        "Schedule routine veterinary checkups"
+                    ]
+                },
+                {
+                    disease: "Bovine Respiratory Disease",
+                    confidence: 78,
+                    symptoms: ["Nasal discharge", "Labored breathing", "Lethargic appearance"],
+                    severity: "medium",
+                    treatment: "Isolate animal and contact veterinarian immediately for antibiotic treatment",
+                    description: "Signs of respiratory infection observed, likely bacterial pneumonia requiring prompt treatment.",
+                    recommendations: [
+                        "Isolate the affected animal from the herd",
+                        "Contact a veterinarian for proper diagnosis and treatment",
+                        "Improve ventilation in housing areas",
+                        "Monitor other cattle for similar symptoms",
+                        "Consider vaccination program for respiratory diseases"
+                    ]
+                },
+                {
+                    disease: "Mastitis",
+                    confidence: 82,
+                    symptoms: ["Swollen udder", "Redness around teats", "Abnormal milk consistency"],
+                    severity: "high",
+                    treatment: "Immediate veterinary attention required for antibiotic treatment and pain management",
+                    description: "Inflammation of the mammary gland detected, likely bacterial mastitis requiring urgent treatment.",
+                    recommendations: [
+                        "Contact veterinarian immediately",
+                        "Apply cold compresses to reduce swelling",
+                        "Ensure clean milking practices",
+                        "Consider milking frequency adjustments",
+                        "Monitor for fever and systemic symptoms"
+                    ]
+                }
+            ];
+            
+            // Return a random demo response
+            return demoResponses[Math.floor(Math.random() * demoResponses.length)];
         }
 
         const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
@@ -32,19 +67,36 @@ export const analyzeCattleImage = async (imageBase64) => {
         const requestBody = {
             contents: [{
                 parts: [{
-                    text: `You are a veterinary AI assistant. Analyze this cattle image for potential diseases and return ONLY a valid JSON object.
-                    
-                    Focus on common cattle diseases:
-                    - Foot and Mouth Disease
-                    - Bovine Respiratory Disease
-                    - Mastitis
-                    - Bovine Viral Diarrhea
-                    - Blackleg
-                    - Anthrax
-                    - Brucellosis
-                    - Tuberculosis
-                    
-                    If no clear disease is detected, use the 'No disease detected' response.`
+                    text: `You are an expert veterinary AI assistant specializing in cattle health. Analyze this cattle image carefully for potential diseases and health conditions.
+
+CRITICAL ANALYSIS GUIDELINES:
+1. Examine the entire image systematically - look at the animal's posture, skin condition, eyes, nose, mouth, limbs, and overall appearance
+2. Look for visible symptoms like lesions, swelling, discharge, abnormal behavior, or physical deformities
+3. Consider the animal's body condition, coat quality, and alertness
+4. Be conservative in diagnosis - only identify diseases if there are clear, visible symptoms
+
+COMMON CATTLE DISEASES TO LOOK FOR:
+- Foot and Mouth Disease: Blisters on mouth, feet, teats; excessive salivation; lameness
+- Bovine Respiratory Disease: Nasal discharge, coughing, labored breathing, lethargy
+- Mastitis: Swollen, red, or painful udder; abnormal milk; fever
+- Bovine Viral Diarrhea: Diarrhea, fever, nasal discharge, mouth ulcers
+- Blackleg: Swelling in muscles, lameness, fever, depression
+- Anthrax: Sudden death, bloody discharge from body openings
+- Brucellosis: Abortion, retained placenta, infertility
+- Tuberculosis: Chronic cough, weight loss, enlarged lymph nodes
+- Lumpy Skin Disease: Nodules on skin, fever, reduced milk production
+- Ringworm: Circular, scaly patches on skin
+- Pink Eye: Red, swollen, watery eyes; corneal ulcers
+- Hoof problems: Lameness, overgrown hooves, foot rot
+
+RESPONSE REQUIREMENTS:
+- If no clear disease symptoms are visible, respond with "No disease detected"
+- Only diagnose if you can clearly identify specific symptoms
+- Provide realistic confidence scores based on symptom visibility
+- Include practical, actionable recommendations
+- Be specific about symptoms you observe
+
+Return ONLY a valid JSON object with your analysis.`
                 }, {
                     inline_data: {
                         mime_type: "image/jpeg",
@@ -60,13 +112,40 @@ export const analyzeCattleImage = async (imageBase64) => {
                 responseSchema: {
                     type: "object",
                     properties: {
-                        disease: { type: "string", description: "Detected disease name or 'No disease detected'" },
-                        confidence: { type: "integer", description: "Confidence score (0-100)" },
-                        symptoms: { type: "array", items: { type: "string" } },
-                        severity: { type: "string", enum: ["low", "medium", "high", "unknown"] },
-                        treatment: { type: "string", description: "Recommended treatment or action" },
-                        description: { type: "string", description: "Brief description of the disease" },
-                        recommendations: { type: "array", items: { type: "string" } }
+                        disease: { 
+                            type: "string", 
+                            description: "Detected disease name, 'No disease detected', or 'Healthy animal' if no issues found",
+                            examples: ["Foot and Mouth Disease", "Bovine Respiratory Disease", "Mastitis", "No disease detected", "Healthy animal"]
+                        },
+                        confidence: { 
+                            type: "integer", 
+                            description: "Confidence score (0-100) based on symptom visibility and clarity",
+                            minimum: 0,
+                            maximum: 100
+                        },
+                        symptoms: { 
+                            type: "array", 
+                            items: { type: "string" },
+                            description: "Specific visible symptoms observed in the image"
+                        },
+                        severity: { 
+                            type: "string", 
+                            enum: ["low", "medium", "high", "unknown", "none"],
+                            description: "Severity level based on visible symptoms"
+                        },
+                        treatment: { 
+                            type: "string", 
+                            description: "Immediate recommended action or treatment. Use 'No treatment needed' for healthy animals"
+                        },
+                        description: { 
+                            type: "string", 
+                            description: "Brief description of what was observed in the image"
+                        },
+                        recommendations: { 
+                            type: "array", 
+                            items: { type: "string" },
+                            description: "Specific actionable recommendations for the farmer"
+                        }
                     },
                     required: ["disease", "confidence", "symptoms", "severity", "treatment", "description", "recommendations"]
                 }
