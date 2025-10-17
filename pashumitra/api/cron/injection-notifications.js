@@ -120,7 +120,9 @@ async function markNotificationSent(cattleId, eventId, occurrenceDate) {
     if (!db) {
       throw new Error('Database not initialized');
     }
-    const notificationKey = `${cattleId}_${eventId}_${occurrenceDate}`;
+    // Create a safe key by removing invalid characters
+    const safeDate = occurrenceDate.replace(/[.#$\[\]]/g, '_').replace(/:/g, '-');
+    const notificationKey = `${cattleId}_${eventId}_${safeDate}`;
     await db.ref(`notifications/sent/${notificationKey}`).set({
       cattleId,
       eventId,
@@ -141,6 +143,12 @@ function calculateNextInjectionDates(event) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  console.log('Calculating dates for event:', {
+    eventDate: event.date,
+    repeatDuration: event.repeatDuration,
+    completedTill: event.completedTill
+  });
+
   // Calculate occurrences for the next 30 days
   for (let i = 0; i < 30; i++) {
     const occurrenceDate = new Date(nextDate);
@@ -152,13 +160,21 @@ function calculateNextInjectionDates(event) {
         new Date(occurrenceDate) <= new Date(event.completedTill);
       
       if (!isCompleted) {
-        dates.push(occurrenceDate.toISOString());
+        // Create a date string using local date without timezone conversion
+        const year = occurrenceDate.getFullYear();
+        const month = String(occurrenceDate.getMonth() + 1).padStart(2, '0');
+        const day = String(occurrenceDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}T00:00:00.000Z`;
+        dates.push(dateString);
+        console.log('Added injection date:', dateString);
       }
     }
 
+    // Add the repeat duration (in days)
     nextDate.setDate(nextDate.getDate() + (event.repeatDuration || 1));
   }
 
+  console.log('Calculated injection dates:', dates);
   return dates;
 }
 
@@ -221,7 +237,9 @@ async function checkAndSendInjectionNotifications() {
         const nextDates = calculateNextInjectionDates(event);
         
         for (const injectionDate of nextDates) {
-          const notificationKey = `${cattleItem.id}_${event.id}_${injectionDate}`;
+          // Create safe key for checking sent notifications
+          const safeDate = injectionDate.replace(/[.#$\[\]]/g, '_').replace(/:/g, '-');
+          const notificationKey = `${cattleItem.id}_${event.id}_${safeDate}`;
           
           // Check if notification already sent
           if (sentNotifications[notificationKey]) {

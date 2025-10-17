@@ -95,9 +95,15 @@ const CattleDetailsPage = () => {
 
   const handleSchedule = async (data) => {
     try {
+      // Create a date string using local date without timezone conversion
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}T00:00:00.000Z`;
+      
       const eventData = {
         ...data,
-        date: selectedDate.toISOString(),
+        date: dateString,
         cattleId: id,
         isInjection,
         isRepeated,
@@ -161,9 +167,15 @@ const CattleDetailsPage = () => {
 
       const event = events.find(e => e.id === info.event.id);
       if (event) {
+        // Create a date string using local date without timezone conversion
+        const year = info.event.start.getFullYear();
+        const month = String(info.event.start.getMonth() + 1).padStart(2, '0');
+        const day = String(info.event.start.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}T00:00:00.000Z`;
+        
         const updatedEvent = {
           ...event,
-          date: info.event.start.toISOString(),
+          date: dateString,
           updatedAt: new Date().toISOString()
         };
         await update(ref(database, `cattles/${id}/events/${event.id}`), updatedEvent);
@@ -187,10 +199,17 @@ const CattleDetailsPage = () => {
     for (let i = 1; i <= 52; i++) { // 52 weeks = ~12 months
       const nextDate = new Date(startDate);
       nextDate.setDate(startDate.getDate() + (event.repeatDuration * i));
+      
+      // Create a date string using local date without timezone conversion
+      const year = nextDate.getFullYear();
+      const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+      const day = String(nextDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}T00:00:00.000Z`;
+      
       events.push({
         ...event,
         id: `${event.id}_repeat_${i}`,
-        date: nextDate.toISOString(),
+        date: dateString,
         isRepeatedEvent: true
       });
     }
