@@ -114,8 +114,7 @@ Return ONLY a valid JSON object with your analysis.`
                     properties: {
                         disease: { 
                             type: "string", 
-                            description: "Detected disease name, 'No disease detected', or 'Healthy animal' if no issues found",
-                            examples: ["Foot and Mouth Disease", "Bovine Respiratory Disease", "Mastitis", "No disease detected", "Healthy animal"]
+                            description: "Detected disease name, 'No disease detected', or 'Healthy animal' if no issues found"
                         },
                         confidence: { 
                             type: "integer", 
@@ -181,7 +180,14 @@ Return ONLY a valid JSON object with your analysis.`
         console.log('Raw text response from Gemini:', textResponse);
 
         try {
-            const result = JSON.parse(textResponse);
+            let cleanedResponse = textResponse.trim();
+            if (cleanedResponse.startsWith('```json')) {
+                cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedResponse.startsWith('```')) {
+                cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+            
+            const result = JSON.parse(cleanedResponse);
             
             if (result && typeof result === 'object') {
                 return {
